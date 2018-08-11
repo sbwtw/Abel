@@ -1,7 +1,11 @@
 # Project Abel
 
-Project Abel is the second generation of home cloud hardware from Shanghai Wisnuc Technology (SWT).
+Project Abel is the code name for the second generation home nas product from Shanghai Wisnuc Technology (wisnuc).
 
-This repo keeps most hardware-related design files. If you are interested in the hardware and system software backing the product, you can read the document in this repo for a thorough understanding of the whole system.
+This repo holds hardware-related design documents and bsp documents for project abel. They are provided here mainly for wisnuc engineers, project partners and collaborators. 
 
-However, all copyrights and related intellectural properties are reserved by SWT. You can use them in any commercial products.
+For hackers or hobbists who are interested with the internals of a nas system, they can also have a better understanding through these documnents.
+
+However, all copyrights and related intellectural properties are reserved by wisnuc. Anyone can NOT use them in any commercial products without an explicit agreement with wisnuc company.
+
+In short, this is a non-commercial open source license.
