@@ -75,6 +75,39 @@ RELEASE="xenial"                  # build xenial Ubuntu Xenial 16.04 LTS
 BUILD_DESKTOP="no"                # Image with console interface
 ```
 
+### 编译U-boot
+
+```bash
+git clone https://github.com/ayufan-rock64/linux-u-boot.git
+cd linux-u-boot
+git checkout df02018479
+sudo ./make.sh rock64-rk3328
+```
+
+### 编译kernel
+```bash
+git clone https://github.com/ayufan-rock64/linux-kernel.git
+cd linux-kernel
+git checkout ayufan-rock64/linux-build/0.6.45
+# copy kernel-config
+cp ~/Desktop/BSP/build/config/kernel/linux-rk3328-default.config .config
+
+# use .config to compile kernel
+make ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- silentoldconfig
+```
+
+### minicom 直接连接
+
+```bash
+# Tx <---> Rx
+# Rx <---> Tx
+# GND <---> GND
+
+sudo apt install minicom
+ls /dev/ttyUSB*
+sudo minicom -D /dev/ttyUSB0 -c on
+```
+
 ### 配置wifi驱动
 
 ```bash
@@ -131,6 +164,25 @@ auto wlx74da38d18b16
 iface wlx74da38d18b16 inet dhcp
 wireless-ssid SSID_Name
 wireless-key XXXXX
+```
+
+### 网速测试
+
+```bash
+# check network info
+ifconfig
+
+# check network speed of enp1s0
+ethtool enp1s0 | grep Speed
+
+# install iperf in both client and station device
+sudo apt install iperf
+
+# station
+iperf -s
+
+# client
+iperf -c station_IP
 ```
 
 ### 安装node
