@@ -75,13 +75,41 @@ RELEASE="xenial"                  # build xenial Ubuntu Xenial 16.04 LTS
 BUILD_DESKTOP="no"                # Image with console interface
 ```
 
-### 编译U-boot
+### 编译U-boot, arm-trusted-firmware
 
 ```bash
+git clone https://github.com/ayufan-rock64/rkbin.git
+cd rkbin
+git checkout af17d09
+cd ..
+
+git clone https://github.com/ayufan-rock64/arm-trusted-firmware
+cd arm-trusted-firmware
+git checkout f947c7e
+CROSS_COMPILE=aarch64-linux-gnu- sudo -E make PLAT=rk3328 all
+# remove bl31.bin which can be 4+GiB in size and thus may fill the tmpfs mount
+sudo rm build/rk3328/release/bl31.bin
+
+# Build ATF
+trust_merger trust.ini
+
+cd ..
 git clone https://github.com/ayufan-rock64/linux-u-boot.git
 cd linux-u-boot
 git checkout df02018479
-sudo ./make.sh rock64-rk3328
+./make.sh rock64-rk3328
+
+# make idloader.bin
+./rockdev/rk3328/out/tools/mkimage -n rk3328 -T rksd -d ../rkbin/rk33/rk3328_ddr_786MHz_v1.06.bin idbloader.bin
+cat ../rkbin/rk33/rk3328_miniloader_v2.43.bin >> idbloader.bin
+
+cd ..
+mkdir u-boot
+cp arm-trusted-firmware/trust.bin linux-u-boot/uboot.img linux-u-boot/idbloader.bin u-boot
+
+# make rock64_rk3328_uboot.img
+cd u-boot
+sudo ./make-image.sh
 ```
 
 ### 编译kernel
@@ -102,6 +130,7 @@ make ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- silentoldconfig
 # Tx <---> Rx
 # Rx <---> Tx
 # GND <---> GND
+# set baudrate=1500000
 
 sudo apt install minicom
 ls /dev/ttyUSB*
@@ -149,6 +178,10 @@ iwconfig wlx74da38d18b16
 
 # Check which wireless stations / routers are in range
 iwlist wlx74da38d18b16 scan | grep ESSID
+
+# check saved Wireless config
+cd /etc/NetworkManager/system-connections
+ll
 
 # install driver
 make install
