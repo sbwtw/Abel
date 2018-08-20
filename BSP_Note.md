@@ -124,6 +124,28 @@ cp ~/Desktop/BSP/build/config/kernel/linux-rk3328-default.config .config
 make ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- silentoldconfig
 ```
 
+### make full image
+
+```bash
+OFFSET=16                                       # MiB
+BOOTSIZE=64                                     # MiB
+bootstart=$(($OFFSET * 2048))                   # 32768
+rootstart=$(($bootstart + ($BOOTSIZE * 2048)))  # 163840
+bootend=$(($rootstart - 1))                     # 163839
+ROOTSIZE=6 * 1024                               # MiB
+rootend=$($rootstart + $ROOTSIZE - 1)           # 12746751
+
+# parted sdcard, Sector size=512
+sudo parted -s /dev/sdc -- mklabel msdo
+sudo parted -s /dev/sdc -- mkpart primary ext4 32768s 163839s
+sudo parted -s /dev/sdc -- mkpart primary ext4 163840s 12746751s
+sudo parted -s /dev/sdc -- mkpart primary ext4 12746752s 25329663s
+sudo parted -s /dev/sdc -- mkpart primary ext4 25329664s -1s
+sudo dd if=idbloader.bin of=/dev/sdc seek=64 conv=notrunc status=none
+sudo dd if=uboot.img of=/dev/sdc seek=16384 conv=notrunc status=none
+sudo dd if=trust.bin of=/dev/sdc seek=24576 conv=notrunc status=none
+```
+
 ### minicom 直接连接
 
 ```bash
