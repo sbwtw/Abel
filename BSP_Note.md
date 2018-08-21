@@ -124,6 +124,40 @@ cp ~/Desktop/BSP/build/config/kernel/linux-rk3328-default.config .config
 make ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- silentoldconfig
 ```
 
+### Building a Root File System using BusyBox
+```bash
+# compile BusyBox
+git clone https://github.com/mirror/busybox.git
+cd busybox
+git checkout 375951667
+make ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- defconfig
+make ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- menuconfig
+# Settings -> Build Options -> enable the option “Build BusyBox as a static binary (no shared libs)
+# -> Installation Options (make install behavior) –> (./_install) : the root file system will be installed inside _install directory.
+make ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- install
+cd ./_install/
+mkdir proc sys dev etc etc/init.d
+touch etc/init.d/rcS
+# edit etc/init.d/rcS
+chmod +x etc/init.d/rcS
+
+# mkdir boot, copy bootable boot/* to boot/
+
+# create rootfs archives
+find . | cpio -o --format=newc > ../rootfs.img
+cd ..
+gzip -c rootfs.img > rootfs.img.gz
+```
+
++ Content of `etc/init.d/rcS`
+
+```bash
+#!bin/sh
+mount -t proc none /proc
+mount -t sysfs none /sys
+/sbin/mdev -s
+```
+
 ### make full image
 
 ```bash
@@ -251,6 +285,9 @@ curl -O https://nodejs.org/dist/v8.11.3/node-v8.11.3-linux-arm64.tar.xz
 ### 其它相关命令
 
 ```bash
+# 解压debs至特定文件夹
+dpkg -x linux-image-rk3328_5.50_arm64.deb /tmp/image/
+
 # 通过ARP协议获取到的网络上邻居主机的IP地址，用户获取板子的ip（也可以通过查看路由器连接设备的方式）
 arp
 
