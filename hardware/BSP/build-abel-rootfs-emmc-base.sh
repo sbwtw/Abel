@@ -14,7 +14,7 @@ mkdir -p ${OUTPUT}
 
 echo "extracting ubuntu-base"
 tar xzf assets/ubuntu-base-16.04.5-base-arm64.tar.gz -C ${TARGET}
-cp assets/linux-image-4.4.126-13bc656ca4f6-arm64.deb ${TARGET}
+cp assets/linux-image-4.4.126-abel-arm64.deb ${TARGET}
 cp assets/uInitrd-4.4.126+ ${TARGET}/boot
 cp assets/sources.list ${TARGET}/etc/apt/sources.list
 
@@ -82,7 +82,7 @@ chroot ${TARGET} /bin/bash -c "useradd wisnuc -b /home -m -s /bin/bash"
 chroot ${TARGET} /bin/bash -c "echo wisnuc:wisnuc | chpasswd"
 chroot ${TARGET} /bin/bash -c "adduser wisnuc sudo"
 
-chroot ${TARGET} /bin/bash -c "dpkg -i linux-image-4.4.126-13bc656ca4f6-arm64.deb"
+chroot ${TARGET} /bin/bash -c "dpkg -i linux-image-4.4.126-abel-arm64.deb"
 
 chroot ${TARGET} /bin/bash -c "apt-mark hold linux-image-generic"
 chroot ${TARGET} /bin/bash -c "apt-mark hold linux-headers-generic"
@@ -113,7 +113,7 @@ chroot ${TARGET} /bin/bash -c "apt clean"
 
 umount_chroot ${TARGET}
 
-rm -rf ${TARGET}/linux-image-4.4.126-13bc656ca4f6-arm64.deb
+rm -rf ${TARGET}/linux-image-4.4.126-abel-arm64.deb
 
 # remove resolv.conf used in chroot
 rm ${TARGET}/etc/resolv.conf
