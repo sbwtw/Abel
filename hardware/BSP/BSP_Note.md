@@ -117,11 +117,30 @@ sudo ./make-image.sh
 git clone https://github.com/ayufan-rock64/linux-kernel.git
 cd linux-kernel
 git checkout ayufan-rock64/linux-build/0.6.45
+
+# add drive WIFI_RTL88x2BU, see assets/add_config_for_rtl88x2bu.patch
+
 # copy kernel-config
 cp ~/Desktop/BSP/build/config/kernel/linux-rk3328-default.config .config
 
 # use .config to compile kernel
-make ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- silentoldconfig
+make -j4 ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu-
+
+# deb-pkg
+make -j4 deb-pkg KBUILD_DEBARCH=arm64 ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu-
+
+
+# create uInitrd
+sudo mkimage -A arm64 -O linux -T ramdisk -C gzip -n uInitrd -d initrd.img-4.4.126+ uInitrd-4.4.126+
+```
+
+### 安装kexec-tools
+
+```bash
+# need enable Kernel Features -> kexec system call when compiling kernel
+sudo apt install kexec-tools
+kexec -l /boot/vmlinuz-4.4.138-rk3328 \
+--initrd=/boot/initrd.img-4.4.138-rk3328 --reuse-cmdline
 ```
 
 ### Building a Root File System using BusyBox
@@ -179,6 +198,23 @@ sudo dd if=idbloader.bin of=/dev/sdc seek=64 conv=notrunc status=none
 sudo dd if=uboot.img of=/dev/sdc seek=16384 conv=notrunc status=none
 sudo dd if=trust.bin of=/dev/sdc seek=24576 conv=notrunc status=none
 ```
+
+### 配置Ubuntu base
+```bash
+# add fstab
+sudo touch etc/fstab
+echo -e \ 
+"UUID=78facfa2-be63-4127-9386-c3ecd3921b28 / ext4 defaults,noatime,nodiratime,commit=600,errors=remount-ro 0 1\ntmpfs /tmp tmpfs defaults,nosuid 0 0" | sudo tee etc/fstab
+
+# fix getty link
+cd etc/systemd/system/getty.target.wants
+sudo ln -s /lib/systemd/system/serial-getty@.service serial-getty@ttyS2.service
+sudo ln -s /lib/systemd/system/getty@.service getty@ttyS2.service
+
+# add kmod
+sudo cp kmod bin
+```
+
 
 ### minicom 直接连接
 
@@ -243,6 +279,27 @@ ll
 make install
 ```
 
+### enable network
+```bash
+ifconfig -a
+ifconfig eth0 up
+dhclient eth0
+```
+
+### 手动连接WIFI
+
+```bash
+# find wifi interface name
+ifconfig -a
+# turn on wifi
+ifconfig wlx74da38d18b16 up
+# scan wifi
+iwlist wlx74da38d18b16 scan | grep ESSID
+# connect to wifi
+iwconfig wlx74da38d18b16 essid NETWORK_NAME key s:WIRELESS_KEY
+# enable dhcp
+dhclient wlx74da38d18b16
+```
 
 ### 设置自动连接WIFI
 

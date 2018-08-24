@@ -1,0 +1,65 @@
+diff --git a/drivers/net/wireless/rockchip_wlan/Kconfig b/drivers/net/wireless/rockchip_wlan/Kconfig
+index 9df827fd4bde..68fbcc47597c 100644
+--- a/drivers/net/wireless/rockchip_wlan/Kconfig
++++ b/drivers/net/wireless/rockchip_wlan/Kconfig
+@@ -41,6 +41,7 @@ source "drivers/net/wireless/rockchip_wlan/rtl8723cs/Kconfig"
+ source "drivers/net/wireless/rockchip_wlan/rtl8723ds/Kconfig"
+ source "drivers/net/wireless/rockchip_wlan/rtl8812au/Kconfig"
+ source "drivers/net/wireless/rockchip_wlan/rtl8822be/Kconfig"
++source "drivers/net/wireless/rockchip_wlan/rtl88x2bu/Kconfig"
+ source "drivers/net/wireless/rockchip_wlan/mvl88w8977/Kconfig"
+ 
+ endif # WL_ROCKCHIP
+diff --git a/drivers/net/wireless/rockchip_wlan/Makefile b/drivers/net/wireless/rockchip_wlan/Makefile
+index d1aebf7d6bf3..e54cda873cdf 100644
+--- a/drivers/net/wireless/rockchip_wlan/Makefile
++++ b/drivers/net/wireless/rockchip_wlan/Makefile
+@@ -9,6 +9,7 @@ obj-$(CONFIG_RTL8723BU) += rtl8723bu/
+ obj-$(CONFIG_RTL8723CS)	+= rtl8723cs/
+ obj-$(CONFIG_RTL8723DS) += rtl8723ds/
+ obj-$(CONFIG_RTL8822BE)	+= rtl8822be/
++obj-$(CONFIG_RTL88x2BU)	+= rtl88x2bu/
+ obj-$(CONFIG_MVL88W8977)	+= mvl88w8977/
+ obj-$(CONFIG_WL_ROCKCHIP)	+= wifi_sys/rkwifi_sys_iface.o
+ obj-$(CONFIG_WL_ROCKCHIP)	+= rkwifi/rk_wifi_config.o
+diff --git a/drivers/net/wireless/rockchip_wlan/wifi_sys/rkwifi_sys_iface.c b/drivers/net/wireless/rockchip_wlan/wifi_sys/rkwifi_sys_iface.c
+index f79fe447ce1f..4a064a05f491 100644
+--- a/drivers/net/wireless/rockchip_wlan/wifi_sys/rkwifi_sys_iface.c
++++ b/drivers/net/wireless/rockchip_wlan/wifi_sys/rkwifi_sys_iface.c
+@@ -18,6 +18,11 @@ static ssize_t wifi_chip_read(struct class *cls, struct class_attribute *attr, c
+     int count = 0;
+     int type = get_wifi_chip_type();
+ 
++  if(type == WIFI_RTL88x2BU) {
++      count = sprintf(_buf, "%s", "RTL88x2BU");
++      printk("Current WiFi chip is RTL88x2BU.\n");
++  }
++
+ 	if(type == WIFI_RK901) {
+ 	    count = sprintf(_buf, "%s", "APRK901");
+ 	    printk("Current WiFi chip is APRK901.\n");
+diff --git a/include/linux/rfkill-wlan.h b/include/linux/rfkill-wlan.h
+index 85188c4ad9c1..526bab01f7c3 100644
+--- a/include/linux/rfkill-wlan.h
++++ b/include/linux/rfkill-wlan.h
+@@ -71,6 +71,7 @@ enum {
+     WIFI_RTL8189ES,
+     WIFI_RTL8189FS,
+     WIFI_RTL8812AU,
++    WIFI_RTL88x2BU,
+     WIFI_RTL_SERIES,
+     WIFI_ESP8089,
+     WIFI_MVL88W8977,
+diff --git a/net/rfkill/rfkill-wlan.c b/net/rfkill/rfkill-wlan.c
+index 07c1c7c45350..84c9921b8014 100644
+--- a/net/rfkill/rfkill-wlan.c
++++ b/net/rfkill/rfkill-wlan.c
+@@ -154,6 +154,8 @@ int get_wifi_chip_type(void)
+         type = WIFI_RTL8189FS;
+     } else if (strcmp(wifi_chip_type_string, "rtl8812au") == 0) {
+         type = WIFI_RTL8812AU;                        
++    } else if (strcmp(wifi_chip_type_string, "rtl88x2bu") == 0) {
++        type = WIFI_RTL88x2BU;
+     } else if (strcmp(wifi_chip_type_string, "esp8089") == 0) {
+         type = WIFI_ESP8089;
+     } else if (strcmp(wifi_chip_type_string, "mvl88w8977") == 0) {
