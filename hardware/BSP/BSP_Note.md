@@ -196,6 +196,20 @@ dhclient eth0
 ### 手动连接WIFI
 
 ```bash
+# using nmcli
+
+# show device
+nmcli d
+
+# show wifi list
+nmcli d wifi list
+
+# connect to wifi
+nmcli d wifi connect Xiaomi_123_5G password wisnuc123456
+
+###############
+# using ifconfig and iwconfig
+
 # find wifi interface name
 ifconfig -a
 # turn on wifi
@@ -206,6 +220,10 @@ iwlist wlx74da38d18b16 scan | grep ESSID
 iwconfig wlx74da38d18b16 essid NETWORK_NAME key s:WIRELESS_KEY
 # enable dhcp
 dhclient wlx74da38d18b16
+
+
+# show saved wifi connection
+ls -sail /etc/NetworkManager/system-connections/
 ```
 
 ### 设置自动连接WIFI
