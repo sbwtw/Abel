@@ -1,0 +1,22 @@
+{
+  "name": "abel",
+  "version": "1.0.0",
+  "description": "Project Abel is the code name for the second generation home nas product from Shanghai Wisnuc Technology (wisnuc).",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/wisnuc/Abel.git"
+  },
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/wisnuc/Abel/issues"
+  },
+  "homepage": "https://github.com/wisnuc/Abel#readme",
+  "dependencies": {
+    "aglio": "^2.3.0"
+  }
+}
