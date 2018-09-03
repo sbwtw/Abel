@@ -1,0 +1,99 @@
+FORMAT: 1A
+HOST: http://wisnuc.com
+
+# Overview
+
+# Group Users 
+
+User是用户的账户资源；包含如下属性：
+
++ 用户的全局唯一识别ID
++ 密码，作为基础的credential，必须提供且符合格式要求
++ 绑定0-n个微信帐号
++ 绑定0-n个电话号码
++ 绑定0-n个电子邮件地址
+
+## Users [/users]
+
+### 获取用户信息 [GET]
+
+原则上该API仅能获得用户自己的信息。
+
++ response 200
+
+        [
+            {
+                "userId": "a unique identifier",
+                "password": "bcrypt???",
+                "passwordRevocation": "enumerated",
+                "wechatIds": [],
+                "phoneNumbers":[],
+            }
+        ]
+
+### Create a New User [POST]
+
+创建新用户需要提供：
+
++ 密码，必须，有格式要求
++ 手机号码，必须
++ 微信登录凭据，可选
++ 电子邮件，
++ 找回密码方式（手机或电子邮件）
+
++ response 200
+
+### Modify a User [PATCH]
+
++ 修改密码
++ 找回密码
++ 添加微信
++ 删除微信
++ 添加电话号码
++ 删除电话号码
++ 添加电子邮件地址
++ 删除电子邮件地址
+
++ response 200
+
+## WeChat Login [/login/wechat]
+
+
+## Token [/token]
+
+用户资源内的Token是
+
+### Get a Cloud Token [GET]
+
++ response 200
+
+# Group Devices
+
+## Device [/devices]
+
+Device为用户所有的所有iot设备，目前仅支持nas。
+
+```json
+{
+    "id": "device id",
+    "type": "nas",
+    "online": true 
+}
+```
+
+## Create a New Device [POST]
+
+创建新的设备意味着绑定设备，该设备：
+
++ 已经在iot domain中注册
++ 尚未被其他用户绑定
++ 设备必须在线
+
+用户需要通过蓝牙或设备API证明其可以物理接触该设备，
+
++ response 200
+
+## Device Token [/devices/:deviceId/token]
+
+Device Token指Device签发的直接访问Token。
+
