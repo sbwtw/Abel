@@ -72,7 +72,7 @@ mount_chroot ${TARGET}
 # apt update and install
 chroot ${TARGET} /bin/bash -c "apt update"
 chroot ${TARGET} /bin/bash -c "apt -y install sudo initramfs-tools openssh-server parted vim-common tzdata net-tools iputils-ping"
-chroot ${TARGET} /bin/bash -c "apt -y install avahi-daemon avahi-utils btrfs-tools udisks2"
+chroot ${TARGET} /bin/bash -c "apt -y install avahi-daemon avahi-utils btrfs-tools udisks2 git"
 chroot ${TARGET} /bin/bash -c "apt -y install libimage-exiftool-perl imagemagick ffmpeg network-manager"
 chroot ${TARGET} /bin/bash -c "apt -y install build-essential python-minimal curl usbutils wireless-tools"
 chroot ${TARGET} /bin/bash -c "apt -y install samba rsyslog minidlna"
