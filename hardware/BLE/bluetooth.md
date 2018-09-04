@@ -32,3 +32,30 @@ Bluetooth选用TI CC2640R2F模块，支持Bluetooth 4.2/5
 Hello from SPP BLE Server! With Data Length Extension support!
 Advertising...
 ```
+
+### convert .hex to .bin
+
++ 可以在CCS编译的结果中找到intelhex格式的projectName.hex文件
++ 安装python的IntelHex包
++ 使用hex2bin.py转化.hex 为.bin文件
+```bash
+hex2bin.py project_zero_cc2640r2lp_app.hex project_zero_cc2640r2lp_app.bin
+```
+
+### 使用cc2538-bsl.py 烧录BLE的镜像文件
+
++ 连接板子至电脑，出现`/dev/ttyACM0`
++ 下载cc2538-bsl.py
+```
+sudo apt-get install python-serial
+git clone https://github.com/JelmerT/cc2538-bsl.git
+cd cc2538-bsl
+```
++ 擦除原有内容
+```
+sudo ./cc2538-bsl.py -p /dev/ttyACM0 -b 115200 -e
+```
++ 写入新镜像
+```
+sudo ./cc2538-bsl.py -p /dev/ttyACM0 -b 115200 -w project_zero_cc2640r2lp_app.bin
+```
