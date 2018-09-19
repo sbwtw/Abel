@@ -32,6 +32,36 @@ Bluetooth选用TI CC2640R2F模块，支持Bluetooth 4.2/5
 Hello from SPP BLE Server! With Data Length Extension support!
 Advertising...
 ```
+### Bootloader settings
+开启`ROM boot loader` 并设置PIN Number 为13
+
+in `source/ti/devices/cc26x0r2/startup_files/ccfg.c`
+
+```C
+#define SET_CCFG_BL_CONFIG_BOOTLOADER_ENABLE         0xC5       // Enable ROM boot loader
+#define SET_CCFG_BL_CONFIG_BL_LEVEL                     1       // Active high to open boot loader backdoor
+#define SET_CCFG_BL_CONFIG_BL_PIN_NUMBER               13       // DIO number for boot loader backdoor
+#define SET_CCFG_BL_CONFIG_BL_ENABLE                 0xC5       // Enabled boot
+```
+
+### Limited discoverable mode
+
+```C
+// Limited discoverable mode advertises for 30.72s, and then stops
+// General discoverable mode advertises indefinitely
+// #define DEFAULT_DISCOVERABLE_MODE             GAP_ADTYPE_FLAGS_GENERAL
+#define DEFAULT_DISCOVERABLE_MODE             GAP_ADTYPE_FLAGS_LIMITED
+
+// ...
+
+// Set advertising interval
+uint16_t advInt = DEFAULT_ADVERTISING_INTERVAL;
+GAP_SetParamValue(TGAP_LIM_DISC_ADV_INT_MIN, advInt);
+GAP_SetParamValue(TGAP_LIM_DISC_ADV_INT_MAX, advInt);
+// GAP_SetParamValue(TGAP_GEN_DISC_ADV_INT_MIN, advInt);
+// GAP_SetParamValue(TGAP_GEN_DISC_ADV_INT_MAX, advInt);
+GAP_SetParamValue(TGAP_LIM_ADV_TIMEOUT, 30); // Seconds
+```
 
 ### convert .hex to .bin
 

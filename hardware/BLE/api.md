@@ -1,7 +1,7 @@
 # BLE API DOC
 
 ### BLE GATT Characteristic
-BLE 通过`GATT Characteristic`显示只读字段，包括
+BLE 通过`GATT Characteristic`显示的只读字段，包括
 
 | Characteristic | UUID |
 | -------------- |:-------------:|
@@ -11,9 +11,15 @@ BLE 通过`GATT Characteristic`显示只读字段，包括
 | Station Status | BEF2 |
 | Binding Progress | BEF3 |
 
+Read和Notidfy字段
+
+| Characteristic | UUID |
+| -------------- |:-------------:|
+| Station Session | BEF4 |
+
 + **Station Id**:
   0x00: 未获得station id
-  !0x00: station id，具体规则待定
+  非0x00: station id，具体规则待定
 
 + **Station Status**: 用于表示station的配置状态
   0x00: 未获得station状态
@@ -30,6 +36,11 @@ BLE 通过`GATT Characteristic`显示只读字段，包括
   0x03: 连接云服务中
   0x04: 要求用户按下按键
   0x05: 配置失败
+
++ **Station Session**: station与蓝牙的连接session，8 Bytes (0x00000000, 0xFFFFFFFF]
+```javascript
+let session = Math.floor(Math.random() * 4294967295 + 1).toString(16)
+```
 
 ### SPS通讯
 客户端通过蓝牙与station通讯，该协议下蓝牙只是转发
@@ -70,16 +81,16 @@ csr":"blabla"}
 
 | Command | Command Value | Bytes in Packet | Description | Example |
 | ------------- |:-------------:| :-----:|| -----:|-----:|
-| PING | 0x30 | 5 | 带session的心跳连接 | `0x00 0x05 0x31 0x30 0x01` |
+| PING | 0x30 | 12 | 带session的心跳连接 | `0x00 0x08 0x77 0x30 0x36 0xed 0x24 0xd6` |
 | VERSION | 0x31 | 4 | 获取BLE的固件版本 | `0x00 0x04 0x31 0x31`|
 | UPDATE_STATION_ID | 0x32 |  5-20 | 更新station id | `0x00 0x07 0x35 0x32 0x01 0x01 0x01` |
 | UPDATE_STATION_STATUS | 0x33 | 5 | 更新设备绑定状态 | `0x00 0x05 0x34 0x33 0x01`|
 | UPDATE_BINDING_Progress | 0x34 | 5 | 更新首配状态 | `0x00 0x05 0x35 0x34 0x01` |
 
 + BLE到bled.js的输出的通用格式为 `0x00` + length + checksum + command + data
-  1. 心跳包的返回(session为`0x01`): `0x00 0x05 0x31 0x30 0x01`
-  2. 固件版本的请求结果 `0x00 0x6 0x32 0x31 0x01`
-  3. 更新GATT的请求成功的返回 `0x00 0x05 0x72 0x32 0x40`
+  1. 心跳包的返回: `0x00 0x05 0x70 0x30 0x40`
+  2. 固件版本的请求结果 `0x00 0x06 0x32 0x31 0x01`
+  3. 更新station id的请求成功的返回 `0x00 0x05 0x72 0x32 0x40`
 
 + 启动过程
   1. bled.js与BLE模块分别启动
@@ -93,6 +104,17 @@ csr":"blabla"}
     a. 固件版本正常，下一步
     b. 固件版本较低或异常，重启蓝牙至SBL模式，刷写蓝牙固件
   6. bled.js将`Station Id`, `Station Status`更新至BLE的GATT
+
+### Session控制
+
+1. bled.js到BLE的心跳连接带有8 Bytes的session，周期为4s，超时为10s
+2. 当BLE收到new session 存储session值并更新GATT
+  1. 原有session为默认字段(0x00000000)，表示与bled.js的新连接
+  2. 原有session非默认字段时，意味着bled.js进程出现了重启，更新GATT从而可以通知客户端
+  3. 心跳超时，bled.js可能挂掉了，BLE需要将session更新为0x00000000
+3. 当客户端首次通过SPS服务与bled.js通讯时，BLE需要发送CONNECTED的信号到bled.js `0x00 0x21 0x21`
+4. 当客户端与BLE断开连接时，BLE需要发送DISCONNECTED的信号bled.js `0x00 0x22 0x22`
+
 
 ### 首配过程
   1. 客户端通过SPS向station发起绑定请求
