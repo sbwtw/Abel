@@ -92,7 +92,27 @@ csr":"blabla"}
   2. 固件版本的请求结果 `0x00 0x06 0x32 0x31 0x01`
   3. 更新station id的请求成功的返回 `0x00 0x05 0x72 0x32 0x40`
 
-+ 启动过程
+### BLE状态
+BLE状态发生变化时有必要通知bled.js
+
+| Event | Message |
+| -------------- |:-------------:|
+| BLE Init | `0x00 0x20 0x20` |
+| BLE Start Advertising | `0x00 0x21 0x21` |
+| BLE Connect to Client | `0x00 0x22 0x22` |
+| BLE Disconnect with Client | `0x00 0x23 0x23` |
+
+### Session控制
+
+1. bled.js到BLE的心跳连接带有8 Bytes的session，周期为1s，超时为5s
+2. 当BLE收到new session 存储session值并更新GATT
+  1. 原有session为默认字段(0x00000000)，表示与bled.js的新连接
+  2. 原有session非默认字段时，意味着bled.js进程出现了重启，更新GATT从而可以通知客户端
+  3. 心跳超时，bled.js可能挂掉了，BLE需要将session更新为0x00000000
+3. 当客户端与BLE连接时，BLE需要发送CONNECTED的信号到bled.js `0x00 0x22 0x22`
+4. 当客户端与BLE断开连接时，BLE需要发送DISCONNECTED的信号bled.js `0x00 0x23 0x23`
+
+### 启动过程
   1. bled.js与BLE模块分别启动
   2. BLE模块初始化状态并开始广播
   3. bled.js在Appifi启动后启动，获取设备的绑定状态、磁盘信息等 
@@ -103,18 +123,8 @@ csr":"blabla"}
   5. bled.js检测BLE固件版本
     a. 固件版本正常，下一步
     b. 固件版本较低或异常，重启蓝牙至SBL模式，刷写蓝牙固件
-  6. bled.js将`Station Id`, `Station Status`更新至BLE的GATT
-
-### Session控制
-
-1. bled.js到BLE的心跳连接带有8 Bytes的session，周期为4s，超时为10s
-2. 当BLE收到new session 存储session值并更新GATT
-  1. 原有session为默认字段(0x00000000)，表示与bled.js的新连接
-  2. 原有session非默认字段时，意味着bled.js进程出现了重启，更新GATT从而可以通知客户端
-  3. 心跳超时，bled.js可能挂掉了，BLE需要将session更新为0x00000000
-3. 当客户端首次通过SPS服务与bled.js通讯时，BLE需要发送CONNECTED的信号到bled.js `0x00 0x21 0x21`
-4. 当客户端与BLE断开连接时，BLE需要发送DISCONNECTED的信号bled.js `0x00 0x22 0x22`
-
+  6. bled.js开始与BLE的心跳，并更新session id
+  7. bled.js将`Station Id`, `Station Status`更新至BLE的GATT
 
 ### 首配过程
   1. 客户端通过SPS向station发起绑定请求
