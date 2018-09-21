@@ -1,5 +1,6 @@
 const Promise = require('bluebird')
 const SerialPort = require('serialport')
+const Readline = require('@serialport/parser-readline')
 const EventEmitter = require('events')
 
 const COMMAND_CONNECT = 0x55
@@ -34,8 +35,10 @@ class Bled extends EventEmitter {
     super()
     this.port = new SerialPort(devPort, { baudRate: 115200 })
 
-    this.port.on('data', (data) => {
-      // console.log('uart receive raw data', data)
+    this.parser = this.port.pipe(new Readline({ delimiter: '\0\0', encoding: '' }))
+
+    this.parser.on('data', (data) => {
+      console.log('uart receive raw data', data)
       /* no data */
       if (!data || !data.length) return
       /* data does not starts with 0x00: SPS data */
@@ -107,6 +110,28 @@ class Bled extends EventEmitter {
   init () {
     this.session = Math.floor(Math.random() * 4294967295 + 1).toString(16)
     this.pingCount = 0
+    this.writeQuene = []
+    this.state = 'Idle'
+  }
+
+  schedule () {
+    // console.log('schedule', this.writeQuene.length, this.state)
+    if (!this.writeQuene.length || this.state !== 'Idle') return
+    this.state = 'Writing'
+    const { msg, cb } = this.writeQuene.shift()
+    this.port.write(msg)
+
+    /* prevent message from being combined to one data */
+    this.port.drain((error) => {
+      cb(error)
+      this.state = 'Idle'
+      this.schedule()
+    })
+  }
+
+  writebByQuene (msg, cb) {
+    this.writeQuene.push({ msg, cb })
+    this.schedule()
   }
 
   /* send cmd to BLE */
@@ -124,7 +149,7 @@ class Bled extends EventEmitter {
       else cb(null, data.slice(4, data.length))
     })
 
-    this.port.write(msg, (err) => {
+    this.writebByQuene(msg, (err) => {
       if (err) {
         console.log('Error on write: ', err.message)
         cb(err)
@@ -160,7 +185,7 @@ class Bled extends EventEmitter {
   heartbeat () {
     this.pingCount += 1
     console.log('pingCount', this.pingCount)
-    this.pingAsync().then(() => setTimeout(() => this.heartbeat(), 1000)).catch(e => e && console.error('heartbeat error', e))
+    this.pingAsync().then(() => setTimeout(() => this.heartbeat(), 0)).catch(e => e && console.error('heartbeat error', e))
   }
 
   getVersion (cb) {
@@ -206,7 +231,7 @@ class Bled extends EventEmitter {
   }
 
   sendMsg (msg, cb) {
-    this.port.write(`${JSON.stringify(msg)}\n`, cb)
+    this.writebByQuene(`${JSON.stringify(msg)}\n`, cb)
   }
 
   async sendMsgAsync (msg) {
@@ -228,12 +253,10 @@ const DEV_PORT = '/dev/ttyACM0'
 const initAsync = async () => {
   const bled = new Bled(DEV_PORT)
   bled.init()
-  const mode = await bled.connectAsync()
-  if (mode === 'sbl') return false
+  // const mode = await bled.connectAsync()
+  // if (mode === 'sbl') return false
   // mode === 'app'
-  await Promise.delay(100)
   bled.heartbeat()
-  await Promise.delay(100)
 
   bled.on('CMD_COME', pack => bled.sendMsg(res, e => e && console.error('send message via SPS error', e)))
 
