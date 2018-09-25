@@ -217,7 +217,7 @@ ifconfig wlx74da38d18b16 up
 # scan wifi
 iwlist wlx74da38d18b16 scan | grep ESSID
 # connect to wifi
-iwconfig wlx74da38d18b16 essid NETWORK_NAME key s:WIRELESS_KEY
+iwconfig wlx74da38d18b16 essid Xiaomi_123_5G key s:wisnuc123456
 # enable dhcp
 dhclient wlx74da38d18b16
 
