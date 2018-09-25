@@ -172,6 +172,7 @@
 #define SBP_PERIODIC_EVT                      Event_Id_00
 #define SBP_UART_QUEUE_EVT                    Event_Id_02
 #define SBP_UART_STATION_SESSION_EVT          Event_Id_04
+#define SBP_UART_ADVERDATA_UPDATE_EVT         Event_Id_06
 
 #ifdef FEATURE_OAD
 #define SBP_QUEUE_PING_EVT                    Event_Id_01
@@ -186,8 +187,10 @@
                                                SBP_QUEUE_EVT        | \
                                                SBP_UART_QUEUE_EVT   | \
                                                SBP_UART_STATION_SESSION_EVT   | \
+                                               SBP_UART_ADVERDATA_UPDATE_EVT  | \
                                                SBP_PERIODIC_EVT)
 #endif /* FEATURE_OAD */
+
 
 /*********************************************************************
  * TYPEDEFS
@@ -648,8 +651,8 @@ static void SimpleBLEPeripheral_init(void)
   //Register to receive UART messages
   SDITask_registerIncomingRXEventAppCB(SPPBLEServer_enqueueUARTMsg); //ZH
 
-  uint8_t hello[] = "Hello from SPP BLE Server! With Data Length Extension support!\n\r";
-  DEBUG(hello);
+  uint8_t hello[5] = {0x00, 0x20, 0x20, 0x00};
+  SDITask_sendToUART(hello, 5);
 
 #if defined FEATURE_OAD
 #if defined (HAL_IMAGE_A)
@@ -751,7 +754,7 @@ static void SimpleBLEPeripheral_taskFxn(UArg a0, UArg a1)
                 {
                   //Display_print1(dispHandle, 5, 0, "FC Violated: %d", pMsg->msg.flowCtrlEvt.opcode);
                   Display_print1(dispHandle, 4, 0, " %d", retVal);
-                  DEBUG("Noti FAIL");
+                  // DEBUG("Noti FAIL");
                 }
                 else
                 {
@@ -789,6 +792,11 @@ static void SimpleBLEPeripheral_taskFxn(UArg a0, UArg a1)
         Wisnuc_SetParameter(WISNUC_STATIONSESSION_ID, WISNUC_STATIONSESSION_LEN, wisnuc_stationSession_initVal);
       }
 
+      if (events & SBP_UART_ADVERDATA_UPDATE_EVT) {
+        // update advertData
+        GAPRole_SetParameter(GAPROLE_ADVERT_DATA, sizeof(advertData), advertData);
+      }
+
       // If RTOS queue is not empty, process app message.
       if (events & SBP_QUEUE_EVT)
       {
@@ -809,8 +817,6 @@ static void SimpleBLEPeripheral_taskFxn(UArg a0, UArg a1)
       if (events & SBP_PERIODIC_EVT)
       {
         Util_startClock(&periodicClock);
-        // update advertData
-        GAPRole_SetParameter(GAPROLE_ADVERT_DATA, sizeof(advertData), advertData);
 
         // Perform periodic application task
         SimpleBLEPeripheral_performPeriodicTask();
@@ -932,7 +938,7 @@ static uint8_t SimpleBLEPeripheral_processGATTMsg(gattMsgEvent_t *pMsg)
     currentMTUSize = pMsg->msg.mtuEvt.MTU;
     SDITask_setAppDataSize(currentMTUSize);
     Display_print1(dispHandle, 5, 0, "MTU Size: %d", currentMTUSize);
-    DEBUG("MTU Size: "); DEBUG((uint8_t*)convInt32ToText((int)currentMTUSize)); DEBUG_NEWLINE();
+    // DEBUG("MTU Size: "); DEBUG((uint8_t*)convInt32ToText((int)currentMTUSize)); DEBUG_NEWLINE();
   }
 
   // Free message payload. Needed only for ATT Protocol messages
@@ -1076,6 +1082,8 @@ static void SimpleBLEPeripheral_processStateChangeEvt(gaprole_States_t newState)
 #ifdef PLUS_BROADCASTER
   static bool firstConnFlag = false;
 #endif // PLUS_BROADCASTER
+  uint8_t connected_msg[5] = {0x00, 0x22, 0x22, 0x00, 0x00};
+  uint8_t disconnected_msg[5] = {0x00, 0x23, 0x23, 0x00, 0x00};
 
   switch ( newState )
   {
@@ -1110,7 +1118,10 @@ static void SimpleBLEPeripheral_processStateChangeEvt(gaprole_States_t newState)
 
     case GAPROLE_ADVERTISING:
       Display_print0(dispHandle, 2, 0, "Advertising");
-      DEBUG("Advertising..."); DEBUG_NEWLINE();
+
+      // uint8_t advertising[3] = {0x00, 0x21, 0x21};
+      // SDITask_sendToUART(advertising, 3);
+      // DEBUG("Advertising..."); DEBUG_NEWLINE();
       break;
 
 #ifdef PLUS_BROADCASTER
@@ -1157,7 +1168,8 @@ static void SimpleBLEPeripheral_processStateChangeEvt(gaprole_States_t newState)
         {
           Display_print1(dispHandle, 2, 0, "Num Conns: %d", (uint16_t)numActive);
           Display_print0(dispHandle, 3, 0, Util_convertBdAddr2Str(linkInfo.addr));
-          DEBUG("CONNECTED..."); DEBUG_NEWLINE();
+          // DEBUG("CONNECTED..."); DEBUG_NEWLINE();
+          SDITask_sendToUART(connected_msg, 5);
         }
         else
         {
@@ -1166,7 +1178,9 @@ static void SimpleBLEPeripheral_processStateChangeEvt(gaprole_States_t newState)
           GAPRole_GetParameter(GAPROLE_CONN_BD_ADDR, peerAddress);
 
           Display_print0(dispHandle, 2, 0, "Connected");
-          DEBUG("CONNECTED..."); DEBUG_NEWLINE();
+          // DEBUG("CONNECTED..."); DEBUG_NEWLINE();
+
+          SDITask_sendToUART(connected_msg, 5);
           Display_print0(dispHandle, 3, 0, Util_convertBdAddr2Str(peerAddress));
         }
 
@@ -1206,7 +1220,8 @@ static void SimpleBLEPeripheral_processStateChangeEvt(gaprole_States_t newState)
 
       Display_print0(dispHandle, 2, 0, "Disconnected");
 
-      DEBUG("DISCONNECTED..."); DEBUG_NEWLINE();
+      // DEBUG("DISCONNECTED..."); DEBUG_NEWLINE();
+      SDITask_sendToUART(disconnected_msg, 5);
       // Clear remaining lines
       Display_clearLines(dispHandle, 3, 5);
       break;
@@ -1215,7 +1230,8 @@ static void SimpleBLEPeripheral_processStateChangeEvt(gaprole_States_t newState)
       SimpleBLEPeripheral_freeAttRsp(bleNotConnected);
 
       Display_print0(dispHandle, 2, 0, "Timed Out");
-      DEBUG("DISCONNECTED AFTER TIMEOUT..."); DEBUG_NEWLINE();
+      // DEBUG("DISCONNECTED AFTER TIMEOUT..."); DEBUG_NEWLINE();
+      SDITask_sendToUART(disconnected_msg, 5);
       // Clear remaining lines
       Display_clearLines(dispHandle, 3, 5);
 
@@ -1268,6 +1284,8 @@ static void SimpleBLEPeripheral_processCharValueChangeEvt(uint8_t paramID)
 
 }
 
+static uint8_t sessionTimer = 0x00;
+
 /*********************************************************************
  * @fn      SimpleBLEPeripheral_performPeriodicTask
  *
@@ -1283,7 +1301,21 @@ static void SimpleBLEPeripheral_processCharValueChangeEvt(uint8_t paramID)
  */
 static void SimpleBLEPeripheral_performPeriodicTask(void)
 {
-
+    if (sessionTimer > 0 && (
+      wisnuc_stationSession_initVal[0] != 0x00 ||
+      wisnuc_stationSession_initVal[1] != 0x00 ||
+      wisnuc_stationSession_initVal[2] != 0x00 ||
+      wisnuc_stationSession_initVal[3] != 0x00
+    )) {
+      wisnuc_stationSession_initVal[0] = 0x00;
+      wisnuc_stationSession_initVal[1] = 0x00;
+      wisnuc_stationSession_initVal[2] = 0x00;
+      wisnuc_stationSession_initVal[3] = 0x00;
+      Wisnuc_SetParameter(WISNUC_STATIONSESSION_ID, WISNUC_STATIONSESSION_LEN, wisnuc_stationSession_initVal);
+      sessionTimer = 0;
+    } else {
+      sessionTimer += 1;
+    }
 }
 
 
@@ -1362,27 +1394,28 @@ void SPPBLEServer_enqueueUARTMsg(uint8_t event, uint8_t *data, uint8_t len)
   // check if application is on
   if (len == 2 && *(data + 0) == 0x55 && *(data + 1) == 0x55) {
     uint8_t appRes[2] = {0x00, 0xAA};
-    uint16 size = 2;
-    SDITask_sendToUART(appRes, size);
+    SDITask_sendToUART(appRes, 2);
     return;
   }
   // command from bled.js
   if (*(data + 0) == 0x00 && len == *(data + 1)) {
     // return version
     if (*(data + 1) == 0x04 && *(data + 2) == 0x31 &&  *(data + 3) == 0x31) { // 0x00 0x04 0x31 0x31
-      uint8_t versionRes[5] = {0x00, 0x05, 0x32, 0x31, 0x01};
-      SDITask_sendToUART(versionRes, 5);
+      uint8_t versionRes[7] = {0x00, 0x05, 0x32, 0x31, 0x01, 0x00, 0x00};
+      SDITask_sendToUART(versionRes, 7);
       return;
     }
     // update station status
     if (*(data + 1) == 0x05 && *(data + 3) == 0x33) { // 0x00 0x05 0x33 0x33 0x01
       // update advertising data
       advertData[5] = *(data + 4);
+      Event_post(syncEvent, SBP_UART_ADVERDATA_UPDATE_EVT);
+
       // update GATT data
       uint8_t statusValue[1] = {*(data + 4)};
       Wisnuc_SetParameter(WISNUC_STATIONSTATUS_ID, WISNUC_STATIONSTATUS_LEN, statusValue);
-      uint8_t stationStatusRes[5] = {0x00, 0x05, 0x34, 0x33, 0x01};
-      SDITask_sendToUART(stationStatusRes, 5);
+      uint8_t stationStatusRes[7] = {0x00, 0x05, 0x34, 0x33, 0x01, 0x00, 0x00};
+      SDITask_sendToUART(stationStatusRes, 7);
       return;
     }
     // update station session
@@ -1390,15 +1423,22 @@ void SPPBLEServer_enqueueUARTMsg(uint8_t event, uint8_t *data, uint8_t len)
       // update GATT data
       // uint8_t sessionValue[WISNUC_STATIONSESSION_LEN] = {*(data + 4), *(data + 5), *(data + 6), *(data + 7)};
       // Wisnuc_SetParameter(WISNUC_STATIONSESSION_ID, WISNUC_STATIONSESSION_LEN, sessionValue);
-
-      wisnuc_stationSession_initVal[0] = *(data + 4);
-      wisnuc_stationSession_initVal[1] = *(data + 5);
-      wisnuc_stationSession_initVal[2] = *(data + 6);
-      wisnuc_stationSession_initVal[3] = *(data + 7);
-      Event_post(syncEvent, SBP_UART_STATION_SESSION_EVT);
-
-      uint8_t stationSessionRes[5] = {0x00, 0x05, 0x31, 0x30, 0x01};
-      SDITask_sendToUART(stationSessionRes, 5);
+      if (wisnuc_stationSession_initVal[0] != *(data + 4) ||
+          wisnuc_stationSession_initVal[1] != *(data + 5) ||
+          wisnuc_stationSession_initVal[2] != *(data + 6) ||
+          wisnuc_stationSession_initVal[3] != *(data + 7)
+      ) {
+        wisnuc_stationSession_initVal[0] = *(data + 4);
+        wisnuc_stationSession_initVal[1] = *(data + 5);
+        wisnuc_stationSession_initVal[2] = *(data + 6);
+        wisnuc_stationSession_initVal[3] = *(data + 7);
+        Event_post(syncEvent, SBP_UART_STATION_SESSION_EVT);
+      }
+      // clear sessionTimer
+      sessionTimer = 0x00;
+      // send response to uart
+      uint8_t stationSessionRes[7] = {0x00, 0x05, 0x31, 0x30, 0x01, 0x00, 0x00};
+      SDITask_sendToUART(stationSessionRes, 7);
       return;
     }
 
@@ -1409,11 +1449,22 @@ void SPPBLEServer_enqueueUARTMsg(uint8_t event, uint8_t *data, uint8_t len)
       memcpy(stationIdValue , data + 4, 0x0C);
       Wisnuc_SetParameter(WISNUC_STATIONID_ID, WISNUC_STATIONID_LEN, stationIdValue);
 
-      uint8_t stationIdRes[5] = {0x00, 0x05, 0x33, 0x32, 0x01};
-      SDITask_sendToUART(stationIdRes, 5);
+      uint8_t stationIdRes[7] = {0x00, 0x05, 0x33, 0x32, 0x01, 0x00, 0x00};
+      SDITask_sendToUART(stationIdRes, 7);
       return;
     }
+    uint8_t unknownCmd[5] = {0x00, 0xFF, 0xFF, 0x00, 0x00};
+    SDITask_sendToUART(unknownCmd, 5);
     return;
+  }
+
+  if (*data == 0x00) {
+      uint8_t unknownData[5] = {0x00, 0xFE, 0xFE, 0x00, 0x00};
+      SDITask_sendToUART(unknownData, 5);
+      SDITask_sendToUART(data, len);
+      uint8_t d[2] = {0x00, 0x00};
+      SDITask_sendToUART(d, 2);
+      return;
   }
 
   //Enqueue message only in a connected state
@@ -1441,11 +1492,13 @@ void SPPBLEServer_enqueueUARTMsg(uint8_t event, uint8_t *data, uint8_t len)
         Event_post(syncEvent, SBP_UART_QUEUE_EVT);
       }else
       {
-        DEBUG("appUARTMsgQueue ERROR");
+        // DEBUG("appUARTMsgQueue ERROR");
         ICall_free(pMsg);
       }
     }
   }
+  uint8_t rspToSPS[5] = {0x00, 0xFD, 0xFD, 0x00, 0x00};
+  SDITask_sendToUART(rspToSPS, 5);
 }
 
 /*********************************************************************
@@ -1505,7 +1558,7 @@ static void SPPBLEServer_handleKeys(uint8_t shift, uint8_t keys)
       //This API is documented in hci.h
       if(SUCCESS != HCI_LE_SetDataLenCmd(connHandle, requestedPDUSize, requestedTxTime))
       {
-        DEBUG("Data length update failed");
+        // DEBUG("Data length update failed");
       }
 
     }
