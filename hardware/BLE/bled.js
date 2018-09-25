@@ -29,27 +29,48 @@ const checksum = (arr) => {
   return sum % 256
 }
 
+/* generate string which consists of a-z,0-9 */
+const generateSession = () => {
+  let session = ''
+  while (session.length !== 4) {
+    session = Math.random().toString(36).substr(2, 4)
+  }
+  return session
+}
+
 /* available events: SPS_DATA, MODE, [COMMAND*] */
 class Bled extends EventEmitter {
   constructor (devPort) {
     super()
     this.port = new SerialPort(devPort, { baudRate: 115200 })
 
+    this.dataArray = []
+
+    this.on('SPS_DATA', (data) => {
+      this.dataArray.push(data)
+      if (data.length && data[data.length - 1] === 0x0A) { // data end with \n
+        const pack = Buffer.concat(this.dataArray).toString().trim()
+        console.log('Get pack:', pack)
+        if (pack === 'come') this.emit('CMD_COME', pack)
+        this.dataArray.length = 0
+      }
+    })
+  }
+
+  init () {
+    this.session = generateSession()
+    this.pingCount = 0
+    this.writeQuene = []
+    this.state = 'Idle'
     this.parser = this.port.pipe(new Readline({ delimiter: '\0\0', encoding: '' }))
 
     this.parser.on('data', (data) => {
-      console.log('uart receive raw data', data)
+      // console.log('uart receive raw data', data)
       /* no data */
       if (!data || !data.length) return
       /* data does not starts with 0x00: SPS data */
       if (data[0] !== 0) {
         this.emit('SPS_DATA', data)
-      } else if (data.toString('hex') === '00cc') {
-        console.log('BLE is in Bootloader mode, need flash firmware')
-        this.emit('MODE', 'sbl')
-      } else if (data.toString('hex') === '00aa') {
-        console.log('BLE is in application mode')
-        this.emit('MODE', 'app')
       } else if (data.length === 3 && data[1] === data[2] && [0x20, 0x21, 0x22, 0x23].includes(data[2])) { // BLE status
         switch (data[2]) {
           case 0x20:
@@ -91,69 +112,43 @@ class Bled extends EventEmitter {
           default:
             break
         }
+      } else if (data.toString('hex') === '00fdfd') {
+        this.emit('SPS_RES', data)
       } else console.warn('Get unknown data', data)
     })
-
-    this.dataArray = []
-
-    this.on('SPS_DATA', (data) => {
-      this.dataArray.push(data)
-      if (data.length && data[data.length - 1] === 0x0A) { // data end with \n
-        const pack = Buffer.concat(this.dataArray).toString().trim()
-        console.log('Get pack:', pack)
-        if (pack === 'come') this.emit('CMD_COME', pack)
-        this.dataArray.length = 0
-      }
-    })
-  }
-
-  init () {
-    this.session = Math.floor(Math.random() * 4294967295 + 1).toString(16)
-    this.pingCount = 0
-    this.writeQuene = []
-    this.state = 'Idle'
   }
 
   schedule () {
     // console.log('schedule', this.writeQuene.length, this.state)
     if (!this.writeQuene.length || this.state !== 'Idle') return
     this.state = 'Writing'
-    const { msg, cb } = this.writeQuene.shift()
-    this.port.write(msg)
-
-    /* prevent message from being combined to one data */
-    this.port.drain((error) => {
-      cb(error)
+    const { cmd, msg, cb } = this.writeQuene.shift()
+    this.once(cmd, (data) => {
+      // console.log('once', cmd, data)
+      cb(null, data.slice(4, data.length))
       this.state = 'Idle'
       this.schedule()
     })
+    this.port.write(msg)
   }
 
-  writebByQuene (msg, cb) {
-    this.writeQuene.push({ msg, cb })
+  writebByQuene (cmd, msg, cb) {
+    this.writeQuene.push({ cmd, msg, cb })
     this.schedule()
   }
 
   /* send cmd to BLE */
   write (cmd, msg, cb) {
+    // console.log('write', cmd, msg)
     const timer = setTimeout(() => {
-      this.port.removeAllListeners(cmd)
-      console.log('timeout write', cmd, msg)
+      this.removeAllListeners(cmd)
       const e = new Error('ETIMEOUT')
       cb(e)
     }, 1000)
 
-    this.once(cmd, (data) => {
+    this.writebByQuene(cmd, msg, (err, res) => {
       clearTimeout(timer)
-      if (cmd === 'MODE') cb(null, data)
-      else cb(null, data.slice(4, data.length))
-    })
-
-    this.writebByQuene(msg, (err) => {
-      if (err) {
-        console.log('Error on write: ', err.message)
-        cb(err)
-      }
+      cb(err, res)
     })
   }
 
@@ -162,7 +157,32 @@ class Bled extends EventEmitter {
   }
 
   connect (cb) {
-    this.write('MODE', Buffer.from([COMMAND_CONNECT, COMMAND_CONNECT]), cb)
+    const timer = setTimeout(() => {
+      this.port.removeAllListeners('data')
+      const e = new Error('ETIMEOUT')
+      cb(e)
+    }, 1000)
+
+    this.port.once('data', (data) => {
+      clearTimeout(timer)
+      if (data.toString('hex') === '00cc') {
+        console.log('BLE is in Bootloader mode, need flash firmware')
+        cb(null, 'sbl')
+      } else if (data.toString('hex') === '00aa') {
+        console.log('BLE is in application mode')
+        cb(null, 'app')
+      } else {
+        const e = new Error('Unkonw Response')
+        cb(e)
+      }
+    })
+
+    this.port.write(Buffer.from([COMMAND_CONNECT, COMMAND_CONNECT]), (err) => {
+      if (err) {
+        clearTimeout(timer)
+        cb(err)
+      }
+    })
   }
 
   async connectAsync () {
@@ -170,7 +190,7 @@ class Bled extends EventEmitter {
   }
 
   ping (cb) {
-    const buf = Buffer.concat([Buffer.alloc(4), Buffer.from(this.session, 'hex')])
+    const buf = Buffer.concat([Buffer.alloc(4), Buffer.from(this.session)])
     buf[0] = 0x00
     buf[1] = 0x08
     buf[3] = COMMAND_PING
@@ -185,7 +205,7 @@ class Bled extends EventEmitter {
   heartbeat () {
     this.pingCount += 1
     console.log('pingCount', this.pingCount)
-    this.pingAsync().then(() => setTimeout(() => this.heartbeat(), 0)).catch(e => e && console.error('heartbeat error', e))
+    this.pingAsync().then(() => setTimeout(() => this.heartbeat(), 1000)).catch(e => e && console.error('heartbeat error', e))
   }
 
   getVersion (cb) {
@@ -231,7 +251,7 @@ class Bled extends EventEmitter {
   }
 
   sendMsg (msg, cb) {
-    this.writebByQuene(`${JSON.stringify(msg)}\n`, cb)
+    this.writebByQuene('SPS_RES', `${JSON.stringify(msg)}\n`, cb)
   }
 
   async sendMsgAsync (msg) {
@@ -252,9 +272,10 @@ const DEV_PORT = '/dev/ttyACM0'
 
 const initAsync = async () => {
   const bled = new Bled(DEV_PORT)
+  const mode = await bled.connectAsync()
+  if (mode === 'sbl') return false
+
   bled.init()
-  // const mode = await bled.connectAsync()
-  // if (mode === 'sbl') return false
   // mode === 'app'
   bled.heartbeat()
 
@@ -263,9 +284,9 @@ const initAsync = async () => {
   const version = await bled.getVersionAsync()
   console.log('BLE Version:', version)
   await bled.setStationIdAsync(Buffer.from('stationid123'))
-  console.log('Update station id success')
+  // console.log('Update station id success')
   await bled.setStationStatusAsync(0x01)
-  console.log('Update station status success')
+  // console.log('Update station status success')
   return true
 }
 

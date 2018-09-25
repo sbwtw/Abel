@@ -37,9 +37,12 @@ Read和Notidfy字段
   0x04: 要求用户按下按键
   0x05: 配置失败
 
-+ **Station Session**: station与蓝牙的连接session，8 Bytes (0x00000000, 0xFFFFFFFF]
++ **Station Session**: station与蓝牙的连接session，4 Bytes
 ```javascript
-let session = Math.floor(Math.random() * 4294967295 + 1).toString(16)
+let session = ''
+while (session.length !== 4) {
+  session = Math.random().toString(36).substr(2, 4)
+}
 ```
 
 ### SPS通讯
