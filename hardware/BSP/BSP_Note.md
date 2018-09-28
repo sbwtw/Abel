@@ -207,6 +207,18 @@ nmcli d wifi list
 # connect to wifi
 nmcli d wifi connect Xiaomi_123_5G password wisnuc123456
 
+# disconnect wifi
+nmcli device disconnect wlx74da38d18b16
+
+# netwoking monitor
+ip monitor
+
+# wifi connected
+# local 192.168.31.67 dev wlan0  table local  proto kernel  scope host  src 192.168.31.67
+
+# wifi disconnected
+# Deleted local 192.168.31.67 dev wlan0  table local  proto kernel  scope host  src 192.168.31.67
+
 ###############
 # using ifconfig and iwconfig
 

@@ -51,7 +51,8 @@ class Bled extends EventEmitter {
       if (data.length && data[data.length - 1] === 0x0A) { // data end with \n
         const pack = Buffer.concat(this.dataArray).toString().trim()
         console.log('Get pack:', pack)
-        if (pack === 'come') this.emit('CMD_COME', pack)
+        if (pack === 'scan') this.emit('CMD_SCAN', pack)
+        if (pack === 'conn') this.emit('CMD_CONN', pack)
         this.dataArray.length = 0
       }
     })
@@ -259,42 +260,4 @@ class Bled extends EventEmitter {
   }
 }
 
-const res = {
-  session: 'session-blabla',
-  op: 'binding',
-  awsalb: 'awsalb-blabla',
-  essid: 'wifi-essid',
-  password: 'wifi-password',
-  csr: 'csr-blabla-loooooooog-wooooooooooooord'
-}
-
-const DEV_PORT = '/dev/ttyACM0'
-
-const initAsync = async () => {
-  const bled = new Bled(DEV_PORT)
-  const mode = await bled.connectAsync()
-  if (mode === 'sbl') return false
-
-  bled.init()
-  // mode === 'app'
-  bled.heartbeat()
-
-  bled.on('CMD_COME', pack => bled.sendMsg(res, e => e && console.error('send message via SPS error', e)))
-
-  const version = await bled.getVersionAsync()
-  console.log('BLE Version:', version)
-  await bled.setStationIdAsync(Buffer.from('stationid123'))
-  // console.log('Update station id success')
-  await bled.setStationStatusAsync(0x01)
-  // console.log('Update station status success')
-  return true
-}
-
-initAsync().then((isApp) => {
-  if (isApp) {
-    console.log('\ninit success!')
-  } else process.exit(0)
-}).catch((e) => {
-  console.log('\ninit failed', e)
-  process.exit(1)
-})
+module.exports = Bled
