@@ -17,7 +17,7 @@ const ACK_BYTE = [0x00, 0xCC]
 
 /* TODO */
 const DEV_PORT = '/dev/ttyACM0'
-const INPUT_BIN = './pz.bin'
+const INPUT_BIN = './ble.bin'
 
 const port = new SerialPort(DEV_PORT, {
   baudRate: 115200

@@ -89,3 +89,8 @@ sudo ./cc2538-bsl.py -p /dev/ttyACM0 -b 115200 -e
 ```
 sudo ./cc2538-bsl.py -p /dev/ttyACM0 -b 115200 -w project_zero_cc2640r2lp_app.bin
 ```
+
+### 使用flash.js烧录BLE镜像(默认端口`/dev/ttyACM0`，镜像文件`ble.bin`)
+```
+node flash.js
+```

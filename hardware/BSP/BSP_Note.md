@@ -198,6 +198,9 @@ dhclient eth0
 ```bash
 # using nmcli
 
+# show connection list
+nmcli c show
+
 # show device
 nmcli d
 
