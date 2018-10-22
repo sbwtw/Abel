@@ -1,3 +1,8 @@
+# Preset
+
+Preset是Provisioning过程的第一个步骤，写入并锁定atecc芯片的config zone。
+
+
 > datasheet 4.1 
 > 16 bit (2 byte) integers, typically Param2, SlotConfig or KeyConfig, appear on the bus least-significant byte first.
 

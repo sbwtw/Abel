@@ -1,1 +1,8 @@
 node_modules/
+hardware/hardware-spec.pdf
+
+*.pdf
+*.crt
+*.key
+*.pem
+*.csr
