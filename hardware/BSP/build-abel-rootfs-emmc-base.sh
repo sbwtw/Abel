@@ -13,11 +13,12 @@ mkdir -p ${TARGET}
 mkdir -p ${OUTPUT}
 
 echo "extracting ubuntu-base"
-tar xzf assets/ubuntu-base-16.04.5-base-arm64.tar.gz -C ${TARGET}
+tar xzf assets/ubuntu-base-18.04.1-base-arm64.tar.gz -C ${TARGET}
 cp assets/linux-image-4.4.126-abel-arm64.deb ${TARGET}
 cp assets/uInitrd-4.4.126+ ${TARGET}/boot
 cp assets/sources.list ${TARGET}/etc/apt/sources.list
 
+mkdir -p ${TARGET}/etc/systemd/network/
 cat <<EOF > ${TARGET}/etc/systemd/network/wired.network
 [Match]
 Name=en*
@@ -27,7 +28,7 @@ EOF
 
 # This is a temporary setting for chroot
 cat <<EOF > ${TARGET}/etc/resolv.conf
-nameserver 127.0.1.1
+nameserver 192.168.31.1
 EOF
 
 cat <<EOF > ${TARGET}/etc/hosts
