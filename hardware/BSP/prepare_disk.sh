@@ -50,6 +50,7 @@ ln -s /usr/local/node/bin/npx /tmp/partA/usr/local/bin/npx
 echo 'setting up winas'
 cp ./assets/version /tmp/partA/etc/version
 cp ./assets/device /tmp/partA/etc/device
+cp ./assets/ble.bin /tmp/partA/
 
 echo 'create fstab'
 echo "UUID=$(blkid -s UUID -o value ${target}2) / ext4 defaults,noatime,nodiratime,commit=600,errors=remount-ro 0 1" >> /tmp/partA/etc/fstab
